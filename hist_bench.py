@@ -3,6 +3,18 @@ import pandas as pd
 import gen_fns
 import math
 
+def reformat_raw_data(file, n_header=1):
+    countries, columns, raw_data = get_data(file, n_header)
+
+    pursuit_cols = [0, 1, 3, 5, 7, 8, 11, 12, 13, 17, 18, 20, 22, 23]
+    acquire_cols = [0, 2, 4, 6, 9, 10, 14, 15, 16, 17, 19, 21, 22, 24]
+
+    #TODO: READ ABOUT Numpy, is it easy to strip out rows? Is this a good plan?
+    #TODO: STRIP OUT "Acquire" and "Pursuit" from text
+    #TODO: After year, add in new column 'Status' == P, A, N (nuclear), C (conventional) to represent that country's nuclear weapon status
+    #TODO: Write a function that make just a list based on 'Status'
+    #TODO: For any country without a year, add in 2015 (?)
+    
 def calc_pursuit(raw_data, weights):
     final_vals = []
     weighted_factors = weights*raw_data
@@ -108,7 +120,8 @@ def raw_to_factor_scores(infile, n_head=1):
  
 
 # GDP defined in billions, mapped to a 1-10 scale
-# TODO: NOT DEFINED TO ACCEPT ARRAYS!!!!
+# TODO: NOT DEFINED TO ACCEPT ARRAYS!!!
+# NOT CURRENTLY USED???!
 def gdp2score(gdp_val):
     step0 = 1
     step1 = 25
