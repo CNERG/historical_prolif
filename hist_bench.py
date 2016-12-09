@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 import gen_fns
-   
+import math
+
 def calc_pursuit(raw_data, weights):
     final_vals = []
     weighted_factors = weights*raw_data
@@ -94,20 +95,20 @@ def raw_to_factor_scores(infile, n_head=1):
 
     factors = np.array(["Auth", "Reactors", "Enrich", "U_Res",
                         "Sci_Net", "Mil_Iso", "Conflict", "Mil_Sp"])
-    score_array = np.ndarray(0, factors.size + 1)
+    score_array = np.ndarray(factors.size)
 
     # find the relevant columns
     auth_col = raw_data["Global_Peace_Index"]
     
     
     #access a column: data[:,i]
-
     
-# TODO: LOOP THROUGH EACH COUNTRY (MAYBE NOT!)
-# TODO: CONVERT INDIVIDUAL COLUMNS INTO FACTOR SCORES, READ BACK A NEW CSV
+    # TODO: LOOP THROUGH EACH COUNTRY (MAYBE NOT!)
+    # TODO: CONVERT INDIVIDUAL COLUMNS INTO FACTOR SCORES, READ BACK A NEW CSV
  
 
 # GDP defined in billions, mapped to a 1-10 scale
+# TODO: NOT DEFINED TO ACCEPT ARRAYS!!!!
 def gdp2score(gdp_val):
     step0 = 1
     step1 = 25
@@ -147,52 +148,61 @@ def gdp2score(gdp_val):
 # If only with non-nuclear states (npt), score is lower
 # If with nuclear states (nuclear umbrella), then only count these
 
-def agreement2score(npt, non_npt=0):
+# SOMEHOW THIS NEEDS TO INVERT RESULTS (high npt,ws == LOW SCORE)
+def iso2score(npt, ws=None):
     stepA = 2
     stepB = 4
     stepC = 7
+    
+    all_scores = np.ndarray(npt.size)
 
-    score = -1
-    # if all agreements are with other non-nuclear states
-    if (non_npt == 0):
-        if (npt <= stepA):
-            score = 1
-        elif (npt <= stepB):
-            score = 2
-        elif (npt <= stepC):
-            score = 3
-    else:
-        if (non_npt <= stepA):
-            score = 6
-        elif (non_npt <= stepB):
-            score = 7
-        elif (non_npt <= stepC):
-            score = 8
+    for i in range(npt.size):
+        score = -1
+        # if all agreements are with other non-nuclear states
+        if (ws is None) or (ws[i] == 0) or (math.isnan(ws[i])):
+            if (math.isnan(npt[i])):
+                score = np.nan
+            elif (npt[i] <= stepA):
+                score = 1
+            elif (npt[i] <= stepB):
+                score = 2
+            else:
+                score = 3
         else:
-            score = 10
+            if (ws[i] <= stepA):
+                score = 6
+            elif (ws[i] <= stepB):
+                score = 7
+            elif (ws[i] <= stepC):
+                score = 8
+            else:
+                score = 10
 
-    return score
+        all_scores[i] = score
+
+    return all_scores
 
 
-# Use global peace index to convert both domestic and external stability into
+# Use Global Peace Index to convert both domestic and external stability into
 # a conflict score
 
 # *** NOT DEFINED FOR VALUES BETWEEN 2.5 and 3!!!
-def peace2score(gpi_array):
+def conflict2score(gpi_array):
     stepA = 1.5
     stepB = 2
 #    step3 = 2.5
     stepC = 3
     stepD = 3.5
 
-    all_scores = np.array(gpi_array.size) #size(gpi_array)
+    all_scores = np.ndarray(gpi_array.size)
 
-    for ind in range(gpi_array.size):
-        print "ind", ind
-        gpi_val = gpi_array[ind]
+    for i in range(gpi_array.size):
+        gpi_val = gpi_array[i]
         score = -1
-        
-        if (gpi_val < stepA):
+
+        if (math.isnan(gpi_val)):
+            score = np.nan
+        elif (gpi_val < stepA):
             score = 2
         elif (gpi_val < stepB):
             score = 4
@@ -203,8 +213,7 @@ def peace2score(gpi_array):
         else:
             score = 10
 
-        print "score ", score
-        all_scores[ind] = score
+        all_scores[i] = score
         
     return all_scores
 
@@ -215,87 +224,116 @@ def mil2score(mil_gdp):
     stepC = 3
     stepD = 5
 
-    score = -1
-    if (mil_gdp < stepA):
-        score = 1
-    elif (mil_gdp < stepB):
-        score = 2
-    elif (mil_gdp < stepC):
-        score = 4
-    elif (mil_gdp < stepD):
-        score = 7
-    else:
-        score = 10
+    all_scores = np.ndarray(mil_gdp.size)
+    
+    for i in range(mil_gdp.size):
+        score = -1
+        if (math.isnan(mil_gdp[i])):
+            score = np.nan
+        elif (mil_gdp[i] < stepA):
+            score = 1
+        elif (mil_gdp[i] < stepB):
+            score = 2
+        elif (mil_gdp[i] < stepC):
+            score = 4
+        elif (mil_gdp[i] < stepD):
+            score = 7
+        else:
+            score = 10
 
-    return score
+        all_scores[i] = score
+
+    return all_scores
 
 
 # Convert number of reactors to a score
 # ** DOES THIS INCLUDE RESEARCH OR ONLY COMMERCIAL?
 # ** HOW TO DEAL WITH PLANNED VS BUILT???
-def react2score(n_planned, n_built=0):
-    stepA = 3
-    stepB = 7
-
-    score = -1
+#def react2score(n_planned, n_built=None):
+def react2score(n_react):
+    step0 = 0.0
+    stepA = 1.0
+    stepB = 3.0
+    stepC = 7.0
+       
+    all_scores = np.ndarray(n_react.size)
     
-    if (n_built == 0):
-        if (n_planned <= stepA):
+    for i in range(n_react.size):
+        score = -1
+        print n_react[i]
+        if (math.isnan(n_react[i])):
+            score = np.nan
+        elif (n_react[i] == step0):
+            score = 0
+        elif (n_react[i] <= stepA):
             score = 1
-        else:
-            score = 2
-    else:
-        if (n_built <= stepA):
+        elif (n_react[i] <= stepB):
             score = 4
-        elif (n_built <= stepB):
+        elif (n_react[i] <= stepC):
             score = 7
         else:
             score = 10
 
-    return score
+        all_scores[i] = score
+
+    return all_scores
 
 
 # convert network (defined by intuition as small=1, medium=2, large=3) into
 # a factor score on 1-10 scale.
 # IS THIS IMPLEMENTED CONSISTENT WITH SPREADSHEET??
 def network2score(sci_val):
-    score = -1
 
-    if (sci_val == 1):
-        score = 1
-    elif (sci_val == 2):
-        score = 5
-    else:
-        score = 10
+    all_scores = np.ndarray(sci_val.size)
+    
+    for i in range(sci_val.size):
+        score = -1
+        if (math.isnan(sci_val[i])):
+            score = np.nan
+        elif (sci_val[i] == 1):
+            score = 1
+        elif (sci_val[i] == 2):
+            score = 5
+        else:
+            score = 10
 
-    return score
+        all_scores[i] = score
+
+    return all_scores
 
 
 # 
 # ** HOW DO THESE DATA SPIT OUT to prolif and non-prolif?
 # WHAT IF A COUNTRY HAS MORE THAN 6 alliacnes?
 def alliance2score(non_prolif, prolif=0):
-
     stepA = 2
     stepB = 4
     stepC = 6
     
-    score = -1
-    if (prolif == 0):
-        if (non_prolif <= stepA):
-            score = 1
-        elif (non_prolif <= stepB):
-            score = 2
+    all_scores = np.ndarray(non_prolif.size)
+    
+    for i in range(non_prolif.size):
+        score = -1
+        if (prolif is None) or (prolif[i] == 0) or (math.isnan(prolif[i])):
+            if (math.isnan(non_prolif[i])):
+                score = np.nan
+        if (prolif[i] == 0):
+            if (non_prolif[i] <= stepA):
+                score = 1
+            elif (non_prolif[i] <= stepB):
+                score = 2
+            else:
+                score = 3
         else:
-            score = 3
-    else:
-        if (prolif <= stepA):
-            score = 5
-        elif (prolif <= stepB):
-            score = 6
-        else:
-            score = 7
+            if (prolif[i] <= stepA):
+                score = 5
+            elif (prolif[i] <= stepB):
+                score = 6
+            else:
+                score = 7
 
-    return score
+        all_scores[i] = score
+
+    return all_scores
 
         
