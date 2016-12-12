@@ -2,18 +2,77 @@ import numpy as np
 import pandas as pd
 import gen_fns
 import math
+import re
 
 def reformat_raw_data(file, n_header=1):
+    from gen_fns import get_data
     countries, columns, raw_data = get_data(file, n_header)
 
-    pursuit_cols = [0, 1, 3, 5, 7, 8, 11, 12, 13, 17, 18, 20, 22, 23]
-    acquire_cols = [0, 2, 4, 6, 9, 10, 14, 15, 16, 17, 19, 21, 22, 24]
+    #    pursuit_cols = [0, 1, 3, 5, 7, 8, 11, 12, 13, 17, 18, 20, 22, 23]
+    #    acquire_cols = [0, 2, 4, 6, 9, 10, 14, 15, 16, 17, 19, 21, 22, 24]
 
-    #TODO: READ ABOUT Numpy, is it easy to strip out rows? Is this a good plan?
+    #    pursuit_cols = np.empty
+    #    acquire_cols = np.empty
+    #    new_cols = np.empty
+    
+    pursuit_cols = []
+    acquire_cols = []
+    pursue_names = []
+    acquire_names = []
+    clean_names = []
+    
+    for c in range(len(columns)):
+        if ('Country' in columns[c]):
+            pass
+        elif ('Pursuit_' in columns[c]):
+            #          pursuit_cols.append(c)
+            pursue_names.append(columns[c])
+            new_str = re.sub('Pursuit_', '', columns[c])
+            clean_names.append(new_str)
+        elif ('Acquire_' in columns[c]):
+            #           acquire_cols.append(c)
+            acquire_names.append(columns[c])
+        else:
+            #            pursuit_cols.append(c)
+            #            acquire_cols.append(c)
+            pursue_names.append(columns[c])
+            acquire_names.append(columns[c])
+            clean_names.append(columns[c])
+        print "name is", columns[c]
+        
+    # Column headings include 'Country', but raw_data does not
+    # Must drop Country from the list of clean names
+    pursue_array = raw_data[pursue_names]
+    acquire_array = raw_data[acquire_names]
+
+    pursue_array.dtype.names = clean_names
+    acquire_array.dtype.names = clean_names
+    
+    
+    #    new_str = re.sub('Pursuit_', '', columns[c])
+    #            new_str = re.sub('Acquire_', '', columns[c])
+
+#    for (row in acquire_array):
+#        if (math.isnan(acquire_array['Date'][row])):
+
+
+# use ma.masked_values to MAKE A MASK WHERE DATE VALUE IS NAN, then use ma.compress_rows
+
+            
+    return clean_names, pursue_array, acquire_array
+            
+
+    #TODO: Solution to filter array for pursuit:
+    #http://stackoverflow.com/questions/26154711/filter-rows-of-a-numpy-array
+
     #TODO: STRIP OUT "Acquire" and "Pursuit" from text
-    #TODO: After year, add in new column 'Status' == P, A, N (nuclear), C (conventional) to represent that country's nuclear weapon status
+    #TODO: After year, add in new column 'Status' == P, A, N (nuclear), E (explore), C (conventional) to represent that country's nuclear weapon status
     #TODO: Write a function that make just a list based on 'Status'
     #TODO: For any country without a year, add in 2015 (?)
+
+
+
+
     
 def calc_pursuit(raw_data, weights):
     final_vals = []
