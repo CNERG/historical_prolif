@@ -7,7 +7,8 @@ import re
 def reformat_raw_data(file, n_header=1):
     from gen_fns import get_data
     from numpy.lib.recfunctions import append_fields
-
+    import csv
+    
     countries, columns, raw_data = get_data(file, n_header)
 
     pursue_names = []
@@ -24,9 +25,9 @@ def reformat_raw_data(file, n_header=1):
     cols = data.dtype.names
     
     for c in range(len(cols)):
-        if ('Country' in cols[c]):
-            pass
-        elif ('Pursuit_' in cols[c]):
+#        if ('Country' in cols[c]):
+#            pass
+        if ('Pursuit_' in cols[c]):
             pursue_names.append(cols[c])
             new_str = re.sub('Pursuit_', '', cols[c])
             clean_names.append(new_str)
@@ -67,9 +68,23 @@ def reformat_raw_data(file, n_header=1):
     final_data = np.hstack((pursue_array, acquire_array, conven_array))
     # THEN MERGE INTO ONE CSV
     
-    #TODO: Solution to filter array for pursuit:
-    #http://stackoverflow.com/questions/26154711/filter-rows-of-a-numpy-array
-
+    header ='Country\t'+('\t'.join(map(str,final_data.dtype.names)))
+    
+    with open('test.csv', 'wb') as f:
+        writer = csv.writer(f)
+        writer.writerow([header])
+        for comp in final_data.compressed():
+            for r in range(len(final_data)):
+                cur_line = final_states[r]+'\t'
+                print "start", cur_line
+                for c in range(len(final_data.dtype.names)):
+                    val = final_data._data[r][c]
+                    if (c == 0) :
+                        val = int(val)
+                    cur_line = cur_line + str(val)+ '\t'
+                    print "finish", cur_line
+            writer.writerow([cur_line])
+                        
     return final_states,final_data
 
     
