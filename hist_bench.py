@@ -6,72 +6,71 @@ import re
 
 def reformat_raw_data(file, n_header=1):
     from gen_fns import get_data
+    from numpy.lib.recfunctions import append_fields
+
     countries, columns, raw_data = get_data(file, n_header)
 
-    #    pursuit_cols = [0, 1, 3, 5, 7, 8, 11, 12, 13, 17, 18, 20, 22, 23]
-    #    acquire_cols = [0, 2, 4, 6, 9, 10, 14, 15, 16, 17, 19, 21, 22, 24]
-
-    #    pursuit_cols = np.empty
-    #    acquire_cols = np.empty
-    #    new_cols = np.empty
-    
-    pursuit_cols = []
-    acquire_cols = []
     pursue_names = []
     acquire_names = []
     clean_names = []
+
+    status = np.full(len(countries), 0)
+    raw_data = append_fields(raw_data, 'Status', status)
+
+    cols = raw_data.dtype.names
+    order = range(0, len(cols) - 1)
+    order.insert(2,len(cols) - 1)
+    data = raw_data[[cols[i] for i in order]]
+    cols = data.dtype.names
     
-    for c in range(len(columns)):
-        if ('Country' in columns[c]):
+    for c in range(len(cols)):
+        if ('Country' in cols[c]):
             pass
-        elif ('Pursuit_' in columns[c]):
-            #          pursuit_cols.append(c)
-            pursue_names.append(columns[c])
-            new_str = re.sub('Pursuit_', '', columns[c])
+        elif ('Pursuit_' in cols[c]):
+            pursue_names.append(cols[c])
+            new_str = re.sub('Pursuit_', '', cols[c])
             clean_names.append(new_str)
-        elif ('Acquire_' in columns[c]):
-            #           acquire_cols.append(c)
-            acquire_names.append(columns[c])
+        elif ('Acquire_' in cols[c]):
+            acquire_names.append(cols[c])
         else:
-            #            pursuit_cols.append(c)
-            #            acquire_cols.append(c)
-            pursue_names.append(columns[c])
-            acquire_names.append(columns[c])
-            clean_names.append(columns[c])
-        print "name is", columns[c]
+            pursue_names.append(cols[c])
+            acquire_names.append(cols[c])
+            clean_names.append(cols[c])
         
-    # Column headings include 'Country', but raw_data does not
-    # Must drop Country from the list of clean names
-    pursue_array = raw_data[pursue_names]
-    acquire_array = raw_data[acquire_names]
+    pursue_array = data[pursue_names]
+    acquire_array = data[acquire_names]
+    
+    acquire_mask = np.isnan(acquire_array['Acquire_Date'])
+    acquire_states = countries[~acquire_mask]
+    acquire_array = acquire_array[~acquire_mask]
+
+    pursue_mask = np.isnan(pursue_array['Pursuit_Date'])
+    conven_array = pursue_array[pursue_mask]
+    conven_states = countries[pursue_mask]
+    pursue_array = pursue_array[~pursue_mask]
+    pursue_states = countries[~pursue_mask]
+
+    # For countries that have not pursued, date should be 2015
+    conven_array['Pursuit_Date'] = 2015
+    pursue_array['Status'] = 2
+    acquire_array['Status'] = 3
 
     pursue_array.dtype.names = clean_names
+    pursue_array.mask.dtype.names = clean_names
     acquire_array.dtype.names = clean_names
+    acquire_array.mask.dtype.names = clean_names
+    conven_array.dtype.names = clean_names
+    conven_array.mask.dtype.names = clean_names
+
+
+    final_states = np.hstack((pursue_states, acquire_states, conven_states))
+    final_data = np.hstack((pursue_array, acquire_array, conven_array))
+    # THEN MERGE INTO ONE CSV
     
-    
-    #    new_str = re.sub('Pursuit_', '', columns[c])
-    #            new_str = re.sub('Acquire_', '', columns[c])
-
-#    for (row in acquire_array):
-#        if (math.isnan(acquire_array['Date'][row])):
-
-
-# use ma.masked_values to MAKE A MASK WHERE DATE VALUE IS NAN, then use ma.compress_rows
-
-            
-    return clean_names, pursue_array, acquire_array
-            
-
     #TODO: Solution to filter array for pursuit:
     #http://stackoverflow.com/questions/26154711/filter-rows-of-a-numpy-array
 
-    #TODO: STRIP OUT "Acquire" and "Pursuit" from text
-    #TODO: After year, add in new column 'Status' == P, A, N (nuclear), E (explore), C (conventional) to represent that country's nuclear weapon status
-    #TODO: Write a function that make just a list based on 'Status'
-    #TODO: For any country without a year, add in 2015 (?)
-
-
-
+    return final_states,final_data
 
     
 def calc_pursuit(raw_data, weights):
