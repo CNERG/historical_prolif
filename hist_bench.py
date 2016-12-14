@@ -4,7 +4,7 @@ import gen_fns
 import math
 import re
 
-def reformat_raw_data(file, n_header=1):
+def reformat_raw_data(file, n_header=1, outfile=None):
     from gen_fns import get_data
     from numpy.lib.recfunctions import append_fields
     import csv
@@ -66,25 +66,24 @@ def reformat_raw_data(file, n_header=1):
 
     final_states = np.hstack((pursue_states, acquire_states, conven_states))
     final_data = np.hstack((pursue_array, acquire_array, conven_array))
-    # THEN MERGE INTO ONE CSV
     
     header ='Country\t'+('\t'.join(map(str,final_data.dtype.names)))
-    
-    with open('test.csv', 'wb') as f:
-        writer = csv.writer(f)
-        writer.writerow([header])
-        for comp in final_data.compressed():
-            for r in range(len(final_data)):
-                cur_line = final_states[r]+'\t'
-                print "start", cur_line
-                for c in range(len(final_data.dtype.names)):
-                    val = final_data._data[r][c]
-                    if (c == 0) :
+
+    if (outfile != None):
+        with open(outfile, 'wb') as f:
+            writer = csv.writer(f)
+            writer.writerow([header])
+            i = 0
+            for comp in final_data.compressed():
+                cur_line = final_states[i]+'\t'
+                for c in range(len(comp)):
+                    val = comp[c]
+                    if (c <= 1):
                         val = int(val)
                     cur_line = cur_line + str(val)+ '\t'
-                    print "finish", cur_line
-            writer.writerow([cur_line])
-                        
+                writer.writerow([cur_line])
+                i+=1
+                
     return final_states,final_data
 
     
