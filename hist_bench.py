@@ -3,11 +3,11 @@ import pandas as pd
 import gen_fns
 import math
 import re
+import csv
 
 def reformat_raw_data(file, n_header=1, outfile=None):
     from gen_fns import get_data
     from numpy.lib.recfunctions import append_fields
-    import csv
     
     countries, columns, raw_data = get_data(file, n_header, named_struct=True)
 
@@ -173,23 +173,51 @@ def get_pes(all_countries, pes, status):
 
 # Read in the tsv for raw data of all countries, output a tsv with the data
 # converted into scores and appropriate columns replaced.
-def raw_to_factor_scores(infile, n_head=1):
+def raw_to_factor_scores(infile, n_head=1, outfile=None):
     from gen_fns import get_data
-    countries, col_names, raw_data = get_data(infile, n_head)
+    countries, col_names, raw_data = get_data(infile, n_header = n_head,
+                                              named_struct=True)
+    
+    factors = {
+        "Reactors": [react2score, raw_data['Reactors']],
+        "Mil_Iso": [alliance2iso_score, [raw_data['NonProlif_Alliance'],
+                                         raw_data['Prolif_Alliance']]],
+        "Enrich": [enrich2score, raw_data['Enrichment']],
+        "U_Res": [ures2score, raw_data['UReserves']],
+        "Sci_Net": [network2score, raw_data['Scientific_Network']],
+        "Conflict": [gpi2conflict_score, raw_data['Polity_Index']],
+#        "Auth": [],
+        "Mil_Sp": [mil_sp2score, raw_data['Military_GDP']]
+        }
 
-    factors = np.array(["Auth", "Reactors", "Enrich", "U_Res",
-                        "Sci_Net", "Mil_Iso", "Conflict", "Mil_Sp"])
-    score_array = np.ndarray(factors.size)
+    score_columns = []
+    i = 0
+    
+    for key in factors:
+        score_columns.append(key)
+        fn, inputs = factors[key]
+        scores = fn(inputs)
+        if (i == 0):
+            all_scores = scores
+        else:
+            all_scores = np.column_stack((all_scores, scores))
+        i+=1
 
-    # find the relevant columns
-    auth_col = raw_data["Global_Peace_Index"]
-    
-    
-    #access a column: data[:,i]
-    
-    # TODO: LOOP THROUGH EACH COUNTRY (MAYBE NOT!)
     # TODO: CONVERT INDIVIDUAL COLUMNS INTO FACTOR SCORES, READ BACK A NEW CSV
- 
+    # Write out column header, states, scores to file.
+
+    header ='Country' + '\t' + ('\t'.join(map(str,score_columns)))
+
+    if (outfile != None):
+        with open(outfile, 'wb') as f:
+            writer = csv.writer(f)
+            writer.writerow([header])
+            for row in range(len(all_scores)):
+                cur_line = countries[row]+'\t'+('\t'.join(map(str,all_scores[row])))
+                writer.writerow([cur_line])
+    
+    return factors, score_columns, all_scores
+    
 
 # GDP defined in billions, mapped to a 1-10 scale
 # TODO: NOT DEFINED TO ACCEPT ARRAYS!!!
@@ -307,7 +335,7 @@ def gpi2conflict_score(gpi_array):
 # Fraction of GDP spent on military
 # World Bank http://data.worldbank.org/indicator/MS.MIL.XPND.GD.ZS
 #
-def mil2score(mil_gdp):
+def mil_sp2score(mil_gdp):
     stepA = 1
     stepB = 2
     stepC = 3
@@ -349,7 +377,6 @@ def react2score(n_react):
     
     for i in range(n_react.size):
         score = -1
-        print n_react[i]
         if (math.isnan(n_react[i])):
             score = np.nan
         elif (n_react[i] == step0):
@@ -396,21 +423,22 @@ def network2score(sci_val):
 # Rice University Database http://atop.rice.edu/search
 #
 # HOW TO COMBINE SCORES IS STILL UNCLEAR
-def alliance2iso_score(non_prolif, prolif=0):
+def alliance2iso_score(all_alliances):
     stepA = 2
     stepB = 4
     step2 = 3
     
-    all_scores = np.ndarray(non_prolif.size)
-
-    if (prolif == 0):
-        tot_prolif = non_prolif
-    else:
-        tot_prolif = non_prolif + prolif
+    non_prolif = all_alliances[0]
+    prolif = all_alliances[1]
     
+    all_scores = np.ndarray(non_prolif.size)
+        
+    tot_prolif = non_prolif + prolif
+
+    # WHAT HAPPENS IF NON_PROLIF IS NAN BUT PROLIF IS A NUMBER??
     for i in range(non_prolif.size):
         score = -1
-        if (math.isnan(tot_prolif[i])):
+        if (math.isnan(prolif[i])) and (math.isnan(non_prolif[i])):
                 score = np.nan
         elif (non_prolif[i] <= stepA):
                 score = 1
@@ -418,7 +446,7 @@ def alliance2iso_score(non_prolif, prolif=0):
                 score = 2
         else:
                 score = 3
-        if (prolif != 0) and (not math.isnan(prolif[i])):
+        if (prolif[i] != 0) and (not math.isnan(prolif[i])):
             if (prolif[i] >= step2):
                 score = score + 3
             else:
@@ -433,14 +461,16 @@ def alliance2iso_score(non_prolif, prolif=0):
 # Polity IV Series http://www.systemicpeace.org/inscrdata.html
 #
 def polity2auth_score(polity):
-    return
+    scores = polity
+    return scores
 
 # 
 # Fuhrmman http://www.matthewfuhrmann.com/datasets.html
 # If any enrichment or reprocessing capability then 10, otherwise 0
 #
 def enrich2score(enrich):
-    return
+    scores = enrich
+    return scores
 
 #
 # If any U reserves than 10, otherwise 0
@@ -448,4 +478,5 @@ def enrich2score(enrich):
 # https://www.oecd-nea.org/ndd/pubs/2014/7209-uranium-2014.pdf
 #
 def ures2score(ures):
-    return
+    scores = ures
+    return scores
