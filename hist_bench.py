@@ -67,7 +67,7 @@ def reformat_raw_data(file, n_header=1, outfile=None):
     final_states = np.hstack((pursue_states, acquire_states, conven_states))
     final_data = np.hstack((pursue_array, acquire_array, conven_array))
     
-    header ='Country\t'+('\t'.join(map(str,final_data.dtype.names)))
+    header ='Country' + '\t' + ('\t'.join(map(str,final_data.dtype.names)))
 
     if (outfile != None):
         with open(outfile, 'wb') as f:
@@ -75,12 +75,12 @@ def reformat_raw_data(file, n_header=1, outfile=None):
             writer.writerow([header])
             i = 0
             for comp in final_data.compressed():
-                cur_line = final_states[i]+'\t'
+                cur_line = final_states[i]
                 for c in range(len(comp)):
                     val = comp[c]
                     if (c <= 1):
                         val = int(val)
-                    cur_line = cur_line + str(val)+ '\t'
+                    cur_line = cur_line + '\t' + str(val)
                 writer.writerow([cur_line])
                 i+=1
                 
