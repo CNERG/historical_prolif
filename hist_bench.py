@@ -416,7 +416,7 @@ def alliance2iso_score(non_prolif, prolif=0):
                 score = 1
         elif (non_prolif[i] <= stepB):
                 score = 2
-            else:
+        else:
                 score = 3
         if (prolif != 0) and (not math.isnan(prolif[i])):
             if (prolif[i] >= step2):
