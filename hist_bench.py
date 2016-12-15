@@ -232,9 +232,9 @@ def gdp2score(gdp_val):
 # Bilateral agreements converted to score
 # If only with non-nuclear states (npt), score is lower
 # If with nuclear states (nuclear umbrella), then only count these
-
 # SOMEHOW THIS NEEDS TO INVERT RESULTS (high npt,ws == LOW SCORE)
-def iso2score(npt, ws=None):
+# THIS IS NOT CURRENTLY USED IN PE
+def bilateral2score(npt, ws=None):
     stepA = 2
     stepB = 4
     stepC = 7
@@ -268,15 +268,16 @@ def iso2score(npt, ws=None):
     return all_scores
 
 
-# Use Global Peace Index to convert both domestic and external stability into
-# a conflict score
-
-# *** NOT DEFINED FOR VALUES BETWEEN 2.5 and 3!!!
-def conflict2score(gpi_array):
+#
+# Use Global Peace Index to define a conflict score
+# (includes both domestic and external stability)
+# Institute for Economics & Peace Global Peace Index
+# http://economicsandpeace.org/wp-content/uploads/2015/06/Global-Peace-Index-Report-2015_0.pdf
+#
+def gpi2conflict_score(gpi_array):
     stepA = 1.5
     stepB = 2
-#    step3 = 2.5
-    stepC = 3
+    stepC = 2.5
     stepD = 3.5
 
     all_scores = np.ndarray(gpi_array.size)
@@ -302,7 +303,10 @@ def conflict2score(gpi_array):
         
     return all_scores
 
+#
 # Fraction of GDP spent on military
+# World Bank http://data.worldbank.org/indicator/MS.MIL.XPND.GD.ZS
+#
 def mil2score(mil_gdp):
     stepA = 1
     stepB = 2
@@ -388,37 +392,60 @@ def network2score(sci_val):
 
 
 # 
-# ** HOW DO THESE DATA SPIT OUT to prolif and non-prolif?
-# WHAT IF A COUNTRY HAS MORE THAN 6 alliacnes?
-def alliance2score(non_prolif, prolif=0):
+# Straight sum of alliances with poliferant and non_proliferant states
+# Rice University Database http://atop.rice.edu/search
+#
+# HOW TO COMBINE SCORES IS STILL UNCLEAR
+def alliance2iso_score(non_prolif, prolif=0):
     stepA = 2
     stepB = 4
-    stepC = 6
+    step2 = 3
     
     all_scores = np.ndarray(non_prolif.size)
+
+    if (prolif == 0):
+        tot_prolif = non_prolif
+    else:
+        tot_prolif = non_prolif + prolif
     
     for i in range(non_prolif.size):
         score = -1
-        if (prolif is None) or (prolif[i] == 0) or (math.isnan(prolif[i])):
-            if (math.isnan(non_prolif[i])):
+        if (math.isnan(tot_prolif[i])):
                 score = np.nan
-        if (prolif[i] == 0):
-            if (non_prolif[i] <= stepA):
+        elif (non_prolif[i] <= stepA):
                 score = 1
-            elif (non_prolif[i] <= stepB):
+        elif (non_prolif[i] <= stepB):
                 score = 2
             else:
                 score = 3
-        else:
-            if (prolif[i] <= stepA):
-                score = 5
-            elif (prolif[i] <= stepB):
-                score = 6
+        if (prolif != 0) and (not math.isnan(prolif[i])):
+            if (prolif[i] >= step2):
+                score = score + 3
             else:
-                score = 7
+                score = score + prolif[i]
 
         all_scores[i] = score
 
     return all_scores
 
-        
+
+#
+# Polity IV Series http://www.systemicpeace.org/inscrdata.html
+#
+def polity2auth_score(polity):
+    return
+
+# 
+# Fuhrmman http://www.matthewfuhrmann.com/datasets.html
+# If any enrichment or reprocessing capability then 10, otherwise 0
+#
+def enrich2score(enrich):
+    return
+
+#
+# If any U reserves than 10, otherwise 0
+# OECD U report
+# https://www.oecd-nea.org/ndd/pubs/2014/7209-uranium-2014.pdf
+#
+def ures2score(ures):
+    return
