@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 
 # Import data from a tab separated file
-def get_data(file, n_header=1, col_list=()):
+# if named_struct then it returns a python structured array accessable by
+# column name (but this does not allow for matrix multiplication)
+def get_data(file, n_header=1, col_list=(), named_struct=False):
     row_names = np.genfromtxt(file, delimiter="\t", usecols=0, dtype=str,
                             skip_header=n_header)
 
@@ -11,15 +13,16 @@ def get_data(file, n_header=1, col_list=()):
                         skip_header=n_header-1)
     if not col_list:
         col_list=range(1,len(tmp.dtype.names))
-
-    # now get the remaining column names (how is there not a better way?)
-    raw_data=np.genfromtxt(file, delimiter="\t", usecols=col_list,
-                      names=True, skip_header=n_header-1)
     col_names=tmp.dtype.names
 
-#    raw_data=np.genfromtxt(file, delimiter="\t", usecols=col_list,
-#                           skip_header=n_header)
-
+    # now get the remaining column names (how is there not a better way?)
+    if (named_struct):
+        raw_data=np.genfromtxt(file, delimiter="\t", usecols=col_list,
+                               names=True, skip_header=n_header-1)
+    else:
+        raw_data=np.genfromtxt(file, delimiter="\t", usecols=col_list,
+                               skip_header=n_header-1)
+        
     return row_names, col_names, raw_data
 
 # Make a numpy array of y-vals for a power law given x-vals

@@ -9,7 +9,7 @@ def reformat_raw_data(file, n_header=1, outfile=None):
     from numpy.lib.recfunctions import append_fields
     import csv
     
-    countries, columns, raw_data = get_data(file, n_header)
+    countries, columns, raw_data = get_data(file, n_header, named_struct=True)
 
     pursue_names = []
     acquire_names = []
