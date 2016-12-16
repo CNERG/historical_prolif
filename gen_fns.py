@@ -21,7 +21,7 @@ def get_data(file, n_header=1, col_list=(), named_struct=False):
                                names=True, skip_header=n_header-1)
     else:
         raw_data=np.genfromtxt(file, delimiter="\t", usecols=col_list,
-                               skip_header=n_header-1)
+                               skip_header=n_header)
         
     return row_names, col_names, raw_data
 

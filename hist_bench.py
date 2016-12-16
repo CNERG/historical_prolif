@@ -192,7 +192,6 @@ def raw_to_factor_scores(infile, n_head=1, outfile=None):
 
     score_columns = []
     i = 0
-    
     for key in factors:
         score_columns.append(key)
         fn, inputs = factors[key]
@@ -202,9 +201,6 @@ def raw_to_factor_scores(infile, n_head=1, outfile=None):
         else:
             all_scores = np.column_stack((all_scores, scores))
         i+=1
-
-    # TODO: CONVERT INDIVIDUAL COLUMNS INTO FACTOR SCORES, READ BACK A NEW CSV
-    # Write out column header, states, scores to file.
 
     header ='Country' + '\t' + ('\t'.join(map(str,score_columns)))
 
@@ -216,7 +212,7 @@ def raw_to_factor_scores(infile, n_head=1, outfile=None):
                 cur_line = countries[row]+'\t'+('\t'.join(map(str,all_scores[row])))
                 writer.writerow([cur_line])
     
-    return factors, score_columns, all_scores
+    return countries, score_columns, all_scores
     
 
 # GDP defined in billions, mapped to a 1-10 scale
