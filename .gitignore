@@ -2,3 +2,5 @@
 *pyc
 *~
 score_data.csv
+*.xlsx
+*.old
