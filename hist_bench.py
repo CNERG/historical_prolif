@@ -179,14 +179,15 @@ def raw_to_factor_scores(infile, n_head=1, outfile=None):
                                               named_struct=True)
     
     factors = {
-        "Reactors": [react2score, raw_data['Reactors']],
+        "Reactors": [react2score, [raw_data['Reactors'],
+                                   raw_data['Research_Reactors']]],
         "Mil_Iso": [alliance2iso_score, [raw_data['NonProlif_Alliance'],
                                          raw_data['Prolif_Alliance']]],
         "Enrich": [enrich2score, raw_data['Enrichment']],
         "U_Res": [ures2score, raw_data['UReserves']],
         "Sci_Net": [network2score, raw_data['Scientific_Network']],
-        "Conflict": [gpi2conflict_score, raw_data['Polity_Index']],
-#        "Auth": [],
+        "Conflict": [gpi2conflict_score, raw_data['Global_Peace_Index']],
+        "Auth": [polity2auth_score, raw_data['Polity_Index']],
         "Mil_Sp": [mil_sp2score, raw_data['Military_GDP']]
         }
 
@@ -215,49 +216,14 @@ def raw_to_factor_scores(infile, n_head=1, outfile=None):
     return countries, score_columns, all_scores
     
 
-# GDP defined in billions, mapped to a 1-10 scale
-# TODO: NOT DEFINED TO ACCEPT ARRAYS!!!
-# NOT CURRENTLY USED???!
-def gdp2score(gdp_val):
-    step0 = 1
-    step1 = 25
-    step2 = 50
-    step3 = 100
-    step4 = 200
-    step5 = 500
-    step6 = 1000
-    step7 = 2000
-    step8 = 10000
-
-    score = -1
-    
-    if (gdp_val < step0):
-        score = 0
-    elif (gdp_val < step1):
-        score = 1
-    elif (gdp_val < step2):
-        score = 2
-    elif (gdp_val < step3):
-        score = 3
-    elif (gdp_val < step4):
-        score = 5
-    elif (gdp_val < step5):
-        score = 7
-    elif (gdp_val < step6):
-        score = 8.5
-    elif (gdp_val < step7):
-        score = 9
-    elif (gdp_val < step8):
-        score = 9.5
-
-    return score
 
 
 # Bilateral agreements converted to score
 # If only with non-nuclear states (npt), score is lower
 # If with nuclear states (nuclear umbrella), then only count these
-# SOMEHOW THIS NEEDS TO INVERT RESULTS (high npt,ws == LOW SCORE)
-# THIS IS NOT CURRENTLY USED IN PE
+#
+# NOT CURRENTLY USED
+#
 def bilateral2score(npt, ws=None):
     stepA = 2
     stepB = 4
@@ -291,9 +257,8 @@ def bilateral2score(npt, ws=None):
 
     return all_scores
 
-
 #
-# Use Global Peace Index to define a conflict score
+# Global Peace Index
 # (includes both domestic and external stability)
 # Institute for Economics & Peace Global Peace Index
 # http://economicsandpeace.org/wp-content/uploads/2015/06/Global-Peace-Index-Report-2015_0.pdf
@@ -360,28 +325,46 @@ def mil_sp2score(mil_gdp):
 
 
 # Convert number of reactors to a score
-# ** DOES THIS INCLUDE RESEARCH OR ONLY COMMERCIAL?
-# ** HOW TO DEAL WITH PLANNED VS BUILT???
-#def react2score(n_planned, n_built=None):
-def react2score(n_react):
+# 'Reactors' is commercial, 'Research_Reactors' are in a separate column,
+# with negative number indicating they have only planned reactors.
+# Built reactors take precedence over planned
+#
+# REFERENCE???
+#
+
+def react2score(all_reactors):
     step0 = 0.0
-    stepA = 1.0
-    stepB = 3.0
-    stepC = 7.0
-       
+    stepA = -4.0
+    stepB = -1.0
+    stepC = 3.0
+    stepD = 7.0
+
+    n_react = all_reactors[0]
+    n_research = all_reactors[1]
+    
     all_scores = np.ndarray(n_react.size)
     
     for i in range(n_react.size):
-        score = -1
-        if (math.isnan(n_react[i])):
+        score = 0
+        n_tot = 0
+        # if there are both planned (negative) and built reactors (positive)
+        # between research and commercial, use the 'built' number
+        if ((n_react[i] * n_research[i]) < 0):
+            n_tot = max(n_research[i], n_react[i])
+        else:
+            n_tot = n_research[i] + n_react[i]
+            
+        if (math.isnan(n_tot)):
             score = np.nan
-        elif (n_react[i] == step0):
+        elif (n_tot == step0):
             score = 0
-        elif (n_react[i] <= stepA):
+        elif (n_tot <= stepA):
+            score = 2
+        elif (n_tot <= stepB):
             score = 1
-        elif (n_react[i] <= stepB):
+        elif (n_tot <= stepC):
             score = 4
-        elif (n_react[i] <= stepC):
+        elif (n_tot <= stepD):
             score = 7
         else:
             score = 10
@@ -393,19 +376,28 @@ def react2score(n_react):
 
 # convert network (defined by intuition as small=1, medium=2, large=3) into
 # a factor score on 1-10 scale.
-# IS THIS IMPLEMENTED CONSISTENT WITH SPREADSHEET??
+#
+# Technology Achievement Index
+#
+# REFERENCE URL??
+#
 def network2score(sci_val):
-
+    stepA = 0.2
+    stepB = 0.35
+    stepC = 0.50
+    
     all_scores = np.ndarray(sci_val.size)
     
     for i in range(sci_val.size):
         score = -1
         if (math.isnan(sci_val[i])):
-            score = np.nan
-        elif (sci_val[i] == 1):
             score = 1
-        elif (sci_val[i] == 2):
-            score = 5
+        elif (sci_val[i] < stepA):
+            score = 2
+        elif (sci_val[i] < stepB):
+            score = 4
+        elif (sci_val[i] < stepC):
+            score = 7
         else:
             score = 10
 
@@ -413,47 +405,52 @@ def network2score(sci_val):
 
     return all_scores
 
-
 # 
-# Straight sum of alliances with poliferant and non_proliferant states
+# First assign a score of 0-3 based on number of alliances with non-nuclear
+# states.
+# Then add to that score a 5, 6, or 7 based on the number of alliances with
+# nuclear states (if none then add 0).
+#
 # Rice University Database http://atop.rice.edu/search
 #
-# HOW TO COMBINE SCORES IS STILL UNCLEAR
 def alliance2iso_score(all_alliances):
-    stepA = 2
-    stepB = 4
-    step2 = 3
-    
+    np_stepA = 2
+    np_stepB = 4
+    p_stepA = 1
+    p_stepB = 2
+    p_stepC = 3
+
     non_prolif = all_alliances[0]
     prolif = all_alliances[1]
     
     all_scores = np.ndarray(non_prolif.size)
         
-    tot_prolif = non_prolif + prolif
-
-    # WHAT HAPPENS IF NON_PROLIF IS NAN BUT PROLIF IS A NUMBER??
     for i in range(non_prolif.size):
-        score = -1
+        score = 0
         if (math.isnan(prolif[i])) and (math.isnan(non_prolif[i])):
                 score = np.nan
-        elif (non_prolif[i] <= stepA):
+        elif (non_prolif[i] <= np_stepA):
                 score = 1
-        elif (non_prolif[i] <= stepB):
+        elif (non_prolif[i] <= np_stepB):
                 score = 2
         else:
                 score = 3
-        if (prolif[i] != 0) and (not math.isnan(prolif[i])):
-            if (prolif[i] >= step2):
-                score = score + 3
-            else:
-                score = score + prolif[i]
+        if (not math.isnan(prolif[i])):
+            if (prolif[i] == p_stepA):
+                score = score + 5
+            elif (prolif[i] == p_stepB):
+                score = score + 6
+            elif (prolif[i] >= p_stepC):
+                score = score + 7
 
-        all_scores[i] = score
+        # Isolation is the inverse of amount of alliances
+        all_scores[i] = 10 - score
 
     return all_scores
 
 
 #
+# Center for Systemic Peace
 # Polity IV Series http://www.systemicpeace.org/inscrdata.html
 #
 def polity2auth_score(polity):
