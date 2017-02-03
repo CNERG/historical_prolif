@@ -179,11 +179,11 @@ def raw_to_factor_scores(infile, n_head=1, outfile=None):
                                               named_struct=True)
     
     factors = {
-        "Reactors": [react2score, [raw_data['Reactors'],
+        "Reactor": [react2score, [raw_data['Reactors'],
                                    raw_data['Research_Reactors']]],
         "Mil_Iso": [alliance2iso_score, [raw_data['NonProlif_Alliance'],
                                          raw_data['Prolif_Alliance']]],
-        "Enrich": [enrich2score, raw_data['Enrichment']],
+        "En_Repr": [enrich2score, raw_data['Enrichment']],
         "U_Res": [ures2score, raw_data['UReserves']],
         "Sci_Net": [network2score, raw_data['Scientific_Network']],
         "Conflict": [gpi2conflict_score, raw_data['Global_Peace_Index']],
@@ -203,17 +203,21 @@ def raw_to_factor_scores(infile, n_head=1, outfile=None):
             all_scores = np.column_stack((all_scores, scores))
         i+=1
 
-    header ='Country' + '\t' + ('\t'.join(map(str,score_columns)))
+    header ='Country' + '\t' + 'Date'+ '\t' + 'Status' + '\t'+ (
+        '\t'.join(map(str,score_columns)))
 
     if (outfile != None):
         with open(outfile, 'wb') as f:
             writer = csv.writer(f)
             writer.writerow([header])
             for row in range(len(all_scores)):
-                cur_line = countries[row]+'\t'+('\t'.join(map(str,all_scores[row])))
+                cur_line = countries[row]+ '\t'+ (
+                    str(int(raw_data['Date'][row]))+ '\t') + (
+                        str(raw_data['Status'][row]) + '\t') + (
+                            ('\t'.join(map(str, all_scores[row]))))
                 writer.writerow([cur_line])
     
-    return countries, score_columns, all_scores
+    return countries, raw_data['Date'], raw_data['Status'], score_columns, all_scores
     
 
 
@@ -473,3 +477,4 @@ def enrich2score(enrich):
 def ures2score(ures):
     scores = ures
     return scores
+
