@@ -466,7 +466,7 @@ def polity2auth_score(polity):
 # If any enrichment or reprocessing capability then 10, otherwise 0
 #
 def enrich2score(enrich):
-    scores = enrich
+    scores = enrich*10.0
     return scores
 
 #
@@ -475,6 +475,6 @@ def enrich2score(enrich):
 # https://www.oecd-nea.org/ndd/pubs/2014/7209-uranium-2014.pdf
 #
 def ures2score(ures):
-    scores = ures
+    scores = ures*10.0
     return scores
 
