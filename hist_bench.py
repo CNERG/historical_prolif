@@ -63,7 +63,6 @@ def reformat_raw_data(file, n_header=1, outfile=None):
     conven_array.dtype.names = clean_names
     conven_array.mask.dtype.names = clean_names
 
-
     final_states = np.hstack((pursue_states, acquire_states, conven_states))
     final_data = np.hstack((pursue_array, acquire_array, conven_array))
     
@@ -86,7 +85,9 @@ def reformat_raw_data(file, n_header=1, outfile=None):
                 
     return final_states,final_data
 
-    
+# In: raw data as a numpy array of value for each factor on a 0-10 scale
+# Out: List of pursuit equation values in same order as input data
+# (order: Auth, Mil_Iso, Reactor, En_Repr, Sci_Net, Mil_Sp, Conflict, U_Res)
 def calc_pursuit(raw_data, weights):
     final_vals = []
     weighted_factors = weights*raw_data
@@ -111,6 +112,34 @@ def get_nws():
     nws["USSR"] = 1949
 
     return nws
+
+# Time to acquire for all pursuing states
+# Returns a dictionary of countries that pursued and how long it took them to
+# succeed. Countries that never acquired are listed with a negative number that
+# indicates the time elapsed from beginning of pursuit to 2015
+def time_to_acquire():
+    t2acq = {}
+    t2acq["Argent"] = -37
+    t2acq["Austral"] = -54
+    t2acq["Brazil"] = -37
+    t2acq["China"] = 9
+    t2acq["Egypt"] = -50
+    t2acq["France"] = 6
+    t2acq["India"] = 24
+    t2acq["Iran"] = -30
+    t2acq["Iraq"] = -32
+    t2acq["Israel"] = 9
+    t2acq["Libya"] = -45
+    t2acq["N Korea"] = 26
+    t2acq["S Korea"] = -45
+    t2acq["Pakist"] = 15
+    t2acq["S Afric"] = 5
+    t2acq["Syria"] = -15
+    t2acq["UK"] = 5
+    t2acq["US"] = 3
+    t2acq["USSR"] = 4
+    return t2acq
+
 
 # States that pursued and their pursuit date
 # (from google doc: Main Prolif Spreadsheet, Dec-5-2016)
@@ -138,8 +167,8 @@ def get_pursue():
 
     return pursues
 
-# From a matched pair of numpy arrays containing countries and their pursuit scores,
-# make a new array of the pursuit scores for countries that succeeded
+# From a matched pair of numpy arrays containing countries and their pursuit 
+# scores, make a new array of the pursuit scores for countries that succeeded
 def get_prolif_pe(countries, pes):
     prolif_pes = []
     prolif_st = []
