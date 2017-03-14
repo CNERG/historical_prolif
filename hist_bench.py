@@ -215,7 +215,8 @@ def raw_to_factor_scores(infile, n_head=1, outfile=None):
         "En_Repr": [enrich2score, raw_data['Enrichment']],
         "U_Res": [ures2score, raw_data['UReserves']],
         "Sci_Net": [network2score, raw_data['Scientific_Network']],
-        "Conflict": [gpi2conflict_score, raw_data['Global_Peace_Index']],
+        "Conflict": [upsala2conflict_score, [raw_data['Unique_Conflicts'],
+                                         raw_data['Conflict_Intensity']]],
         "Auth": [polity2auth_score, raw_data['Polity_Index']],
         "Mil_Sp": [mil_sp2score, raw_data['Military_GDP']]
         }
@@ -295,6 +296,8 @@ def bilateral2score(npt, ws=None):
 # (includes both domestic and external stability)
 # Institute for Economics & Peace Global Peace Index
 # http://economicsandpeace.org/wp-content/uploads/2015/06/Global-Peace-Index-Report-2015_0.pdf
+#
+# NOT USED BECAUSE NO HISTORICAL DATA
 #
 def gpi2conflict_score(gpi_array):
     stepA = 1.5
@@ -399,6 +402,47 @@ def react2score(all_reactors):
             score = 4
         elif (n_tot <= stepD):
             score = 7
+        else:
+            score = 10
+
+        all_scores[i] = score
+
+    return all_scores
+
+#
+# Uses number of unique conflicts * conflict intensity to determine total
+# conflict score.  We have re-coded Iraq, Afghanistan, and Mali wars (2000s)
+# as coalition-wars, such that for individual countries the number of deaths
+# is the lower intensity coded as 1.
+# Max # of unique conflicts in historical data is 3
+# Conflict = 5 for neutral relationships, increases with additional conflict.
+#
+# From Upsala
+# 
+
+# ** WHAT TO DO ABOUT TENSE CONFLICT??? **
+def upsala2conflict(all_conflict):
+    neutral = 5  # for neutral relationships, score is 5
+    stepC = 4
+
+    n_conflicts = all_conflict[0]
+    intensity = all_conflict[1]
+    
+    all_scores = np.ndarray(n_conflicts.size)
+    
+    for i in range(n_conflicts.size):
+        score = 0
+        # If intensity is (-) then conflict is a coalition, downgrade intensity
+        # to -1. If n_conflict is (-) then an additional non-armed (tense)
+        # conflict has been added to the data (eg Korean Armistace)
+        if (intensity[i] < 0):
+            n_tot = abs(n_conflicts[i])
+        else:
+            n_tot = abs(n_conflicts[i])*intensity[i]
+        if (math.isnan(n_tot)):
+            score = np.nan
+        elif (n_tot <= stepC):
+            score = neutral + n_tot
         else:
             score = 10
 
