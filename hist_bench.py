@@ -40,42 +40,77 @@ def reformat_raw_data(file, n_header=1, outfile=None):
         
     pursue_array = data[pursue_names]
     acquire_array = data[acquire_names]
-    # for countries that pursued but never acquired, also include data for 2015
-    # Their status should be -1 (present day, non-weapons states)
-    present_array = data[acquire_names]
-    
-    acquire_mask = np.isnan(acquire_array['Acquire_Date'])
-    acquire_states = countries[~acquire_mask]
-    acquire_array = acquire_array[~acquire_mask]
+      
+    no_acquire_mask = np.isnan(acquire_array['Acquire_Date'])
+    conven_mask = np.isnan(pursue_array['Pursuit_Date'])
+    pursue_only_mask = (np.isnan(acquire_array['Acquire_Date'])) & (~(np.isnan(pursue_array['Pursuit_Date'])))
+    print len(pursue_only_mask)
+    #    explore_mask = np.isneg(pursue_array['Pursuit_Date'])
 
-    # TODO: ADD IN PRESENT ARRAY CAPTURING ALL THE 2015 COUNTRIES THAT PURSUED
-    # BUT NEVER ACQUIRED
-    
-    pursue_mask = np.isnan(pursue_array['Pursuit_Date'])
-    conven_array = pursue_array[pursue_mask]
-    conven_states = countries[pursue_mask]
-#    pursue_array = pursue_array[~pursue_mask]
-#    pursue_states = countries[~pursue_mask]
-    pursue_array = pursue_array[acquire_mask]
-    pursue_states = countries[acquire_mask]
+    # states that pursued (_init_) and successfully acquired
+    acquire_states = countries[~no_acquire_mask]
+    acquire_final_array = acquire_array[~no_acquire_mask]
+    acquire_init_array = pursue_array[~no_acquire_mask]
 
+    # states that never pursued and have only conventional weapons
+    conven_array = pursue_array[conven_mask]
+    conven_states = countries[conven_mask]
+
+    #    pursue_array = pursue_only_array[~pursue_only_mask]
+#    pursue_states = countries[~pursue_only_mask]
+
+    # pursuit data for states that pursued but did not succeeed in acquiring
+    # (1st find all states that did not acquire, then remove those that also
+    # did not pursue (conven))
+
+    print "size of pursue array", len(pursue_array)
+    print "size of acquire array", len(acquire_array)
+    pursue_only_array = pursue_array[pursue_only_mask]
+    pursue_states = countries[pursue_only_mask]
+    print len(pursue_only_array)
+    pursue_present_array = acquire_array[pursue_only_mask]
+
+
+#    pursue_only_array = pursue_array[no_acquire_mask]
+#    pursue_states = countries[no_acquire_mask]
+#    pursue_only_array = pursue_only_array[~conven_mask]
+#    pursue_states = pursue_states[~conven_mask]
+    # present day data for states that pursued but did not succeed in acquire
+#    pursue_present_array = acquire_array[no_acquire_mask]
+#    pursue_present_array = pursue_present_array[~conven_mask]
 
     # For countries that have not pursued, date should be 2015
-    conven_array['Pursuit_Date'] = 2015
-    pursue_array['Status'] = 2
-    acquire_array['Status'] = 3
+    acquire_init_array['Status'] = 2
+    acquire_final_array['Status'] = 3
     conven_array['Status'] = 0
-    present_array['Status'] = -1
+    pursue_only_array['Status'] = 2
+    pursue_present_array['Status'] = -1
+
+    conven_array['Pursuit_Date'] = 2015
+    pursue_present_array['Acquire_Date'] = 2015
     
-    pursue_array.dtype.names = clean_names
-    pursue_array.mask.dtype.names = clean_names
-    acquire_array.dtype.names = clean_names
-    acquire_array.mask.dtype.names = clean_names
+    acquire_final_array.dtype.names = clean_names
+    acquire_final_array.mask.dtype.names = clean_names
+    acquire_init_array.dtype.names = clean_names
+    acquire_init_array.mask.dtype.names = clean_names
     conven_array.dtype.names = clean_names
     conven_array.mask.dtype.names = clean_names
+    pursue_only_array.dtype.names = clean_names
+    pursue_only_array.mask.dtype.names = clean_names
+    pursue_present_array.dtype.names = clean_names
+    pursue_present_array.mask.dtype.names = clean_names
 
-    final_states = np.hstack((pursue_states, acquire_states, conven_states))
-    final_data = np.hstack((pursue_array, acquire_array, conven_array))
+    
+    final_states = np.hstack((conven_states,
+                              pursue_states,
+                              acquire_states,
+                              acquire_states,
+                              pursue_states))
+    final_data = np.hstack((conven_array,
+                            pursue_only_array,
+                            acquire_init_array,
+                            acquire_final_array,
+                            pursue_present_array))
     
     header ='Country' + '\t' + ('\t'.join(map(str,final_data.dtype.names)))
 
