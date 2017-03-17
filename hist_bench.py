@@ -5,6 +5,31 @@ import math
 import re
 import csv
 
+
+#
+# reformat_raw_data
+#
+# Takes compiled data on historical proliferation contributers from xlsx
+# spreadsheet (final_hist_data.xlsx) and reformats. xlsx file has a single
+# row for each country with separate data for a 'pursue date' and an 'acquire
+# 'date'.  These are split out so that each state has a unique row entry for
+# every year for which we have data. Nuclear Weapon states have an entry when
+# they began pursuing and another when they acquired. States that explored or
+# pursued have an entry for that year as well as an entry for 2015. States
+# that never pursued have only an entry for 2015.
+# A 'Status' column in output codes the action of the state in the given year
+# (Never/Explore/Pursue/Acquire). Coding details available inline.
+#
+# Input
+#    File:       tab-separated-file dropped straight from xlsx spreadsheet
+#    (n_header): number of extra header lines to be skipped from spreadsheet
+#    (outfile):  name of desired output file, written to directory you're
+#                running python from
+# Output
+#    States:     Array of states for each entry of the file database
+#    Data:       structured array of historical data for each state at time
+#                indicated by 'Date' 
+#
 def reformat_raw_data(file, n_header=1, outfile=None):
     from gen_fns import get_data
     from numpy.lib.recfunctions import append_fields
@@ -133,9 +158,20 @@ def reformat_raw_data(file, n_header=1, outfile=None):
                 
     return final_states,final_data
 
-# In: raw data as a numpy array of value for each factor on a 0-10 scale
-# Out: List of pursuit equation values in same order as input data
-# (order: Auth, Mil_Iso, Reactor, En_Repr, Sci_Net, Mil_Sp, Conflict, U_Res)
+#
+# calc_pursuit
+#
+# Calculates 0-10 scale pursuit scores for historical data using factor
+# weighting from Baptiste's correlation analysis.
+#
+# In:
+#     raw_data:   np.array of value for each factor on a 0-10 scale
+#     weights:    np.array of factor weights (from correlation analysis)
+# Out:
+#     final_vals: List of pursuit equation values in same order as input data
+#                 (order: Auth, Mil_Iso, Reactor, En_Repr, Sci_Net, Mil_Sp,
+#                 Conflict, U_Res)
+#
 def calc_pursuit(raw_data, weights):
     final_vals = []
     weighted_factors = weights*raw_data
@@ -145,7 +181,7 @@ def calc_pursuit(raw_data, weights):
     return final_vals
 
 
-# Weapon states and their acquire date
+# Map of nuclear weapon states and their acquire date
 def get_nws():
     nws = {}
     nws["China"] = 1964
@@ -161,10 +197,17 @@ def get_nws():
 
     return nws
 
-# Time to acquire for all pursuing states
+#
+# time_to_acquire
+#
 # Returns a dictionary of countries that pursued and how long it took them to
 # succeed. Countries that never acquired are listed with a negative number that
 # indicates the time elapsed from beginning of pursuit to 2015
+#
+# In: (none)
+# Out:
+#     t2acq: Dictionary of how long it took state to acquire nuclear weapon
+#
 def time_to_acquire():
     t2acq = {}
     t2acq["Argent"] = -37
@@ -247,9 +290,26 @@ def get_pes(all_countries, pes, status):
             pursue_st.append(curr_state)
     return(pursue_st, pursue_pes)
 
-
-# Read in the tsv for raw data of all countries, output a tsv with the data
-# converted into scores and appropriate columns replaced.
+#
+# raw_to_factor_scores
+#
+# Read in the historical data for all states, output a tsv with the data
+# converted into 0-10 scores for each of the 8 factors
+#
+# In:
+#     infile:    tsv for historical data in clean format
+#                (from reformat_raw_data) 
+#     (n_head):  how many header lines to skip
+#     (outfile): name of desired tab separated file for output, with row and
+#                column headers
+# Out: (all structures preserve order across columns)
+#     countries:  array of state names that pairs with output data
+#     dates:      array of date for the row of factor scores
+#     status:     array with status for the row (never/explore/pursue/acquire)
+#                 (status coding described in README.md)
+#     columns:    list of column names for data
+#     all_scores: np.array of 0-10 score for each factor
+#     
 def raw_to_factor_scores(infile, n_head=1, outfile=None):
     from gen_fns import get_data
     countries, col_names, raw_data = get_data(infile, n_header = n_head,
@@ -297,8 +357,6 @@ def raw_to_factor_scores(infile, n_head=1, outfile=None):
     
     return countries, raw_data['Date'], raw_data['Status'], score_columns, all_scores
     
-
-
 
 # Bilateral agreements converted to score
 # If only with non-nuclear states (npt), score is lower
@@ -458,6 +516,8 @@ def react2score(all_reactors):
     return all_scores
 
 #
+# upsala2conflict_score
+#
 # Uses number of unique conflicts * conflict intensity to determine total
 # conflict score.  We have re-coded Iraq, Afghanistan, and Mali wars (2000s)
 # as coalition-wars, such that for individual countries the number of deaths
@@ -467,8 +527,6 @@ def react2score(all_reactors):
 #
 # From Upsala
 # 
-
-# ** WHAT TO DO ABOUT TENSE CONFLICT??? **
 def upsala2conflict_score(all_conflict):
     neutral = 5  # for neutral relationships, score is 5
     stepC = 4
