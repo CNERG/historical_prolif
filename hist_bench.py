@@ -40,22 +40,33 @@ def reformat_raw_data(file, n_header=1, outfile=None):
         
     pursue_array = data[pursue_names]
     acquire_array = data[acquire_names]
+    # for countries that pursued but never acquired, also include data for 2015
+    # Their status should be -1 (present day, non-weapons states)
+    present_array = data[acquire_names]
     
     acquire_mask = np.isnan(acquire_array['Acquire_Date'])
     acquire_states = countries[~acquire_mask]
     acquire_array = acquire_array[~acquire_mask]
 
+    # TODO: ADD IN PRESENT ARRAY CAPTURING ALL THE 2015 COUNTRIES THAT PURSUED
+    # BUT NEVER ACQUIRED
+    
     pursue_mask = np.isnan(pursue_array['Pursuit_Date'])
     conven_array = pursue_array[pursue_mask]
     conven_states = countries[pursue_mask]
-    pursue_array = pursue_array[~pursue_mask]
-    pursue_states = countries[~pursue_mask]
+#    pursue_array = pursue_array[~pursue_mask]
+#    pursue_states = countries[~pursue_mask]
+    pursue_array = pursue_array[acquire_mask]
+    pursue_states = countries[acquire_mask]
+
 
     # For countries that have not pursued, date should be 2015
     conven_array['Pursuit_Date'] = 2015
     pursue_array['Status'] = 2
     acquire_array['Status'] = 3
-
+    conven_array['Status'] = 0
+    present_array['Status'] = -1
+    
     pursue_array.dtype.names = clean_names
     pursue_array.mask.dtype.names = clean_names
     acquire_array.dtype.names = clean_names
@@ -421,7 +432,7 @@ def react2score(all_reactors):
 # 
 
 # ** WHAT TO DO ABOUT TENSE CONFLICT??? **
-def upsala2conflict(all_conflict):
+def upsala2conflict_score(all_conflict):
     neutral = 5  # for neutral relationships, score is 5
     stepC = 4
 
@@ -434,11 +445,12 @@ def upsala2conflict(all_conflict):
         score = 0
         # If intensity is (-) then conflict is a coalition, downgrade intensity
         # to -1. If n_conflict is (-) then an additional non-armed (tense)
-        # conflict has been added to the data (eg Korean Armistace)
-        if (intensity[i] < 0):
+        # conflict has been added to the data (eg Korean Armistace), (but still
+        # may be coded as zero intensity)
+        if ((intensity[i] < 0) or (n_conflicts[i] < 0)):
             n_tot = abs(n_conflicts[i])
         else:
-            n_tot = abs(n_conflicts[i])*intensity[i]
+            n_tot = n_conflicts[i] * intensity[i]
         if (math.isnan(n_tot)):
             score = np.nan
         elif (n_tot <= stepC):
