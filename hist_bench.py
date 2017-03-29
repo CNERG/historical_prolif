@@ -566,9 +566,9 @@ def upsala2conflict_score(all_conflict):
 # REFERENCE URL??
 #
 def network2score(sci_val):
-    stepA = 0.2
-    stepB = 0.35
-    stepC = 0.50
+    stepA = 1
+    stepB = 2
+    stepC = 3
     
     all_scores = np.ndarray(sci_val.size)
     
