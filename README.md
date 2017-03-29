@@ -31,6 +31,11 @@ PCA analysis shows that Reactors have anti-correlation to pursuit. Confirmed
 that non-relevant factors can be removed from PCA analysis without affecting
 other results (noreactor_test.csv has removed reactor column)
 
+PCA also showed conflict is minimally correlated. Hypothesis that our defn
+requiring 'armed conflict' is a poor proxy for tensions, and does not match
+our forward-model definition of conflict.
+    - Changing the scaling to use full range (0-10 instead of 5-10) did not
+    change PCA weight at all.
 
 
 Notes on Commercial Reactor Technology
