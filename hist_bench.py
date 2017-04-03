@@ -4,6 +4,7 @@ import gen_fns
 import math
 import re
 import csv
+import correlation_matrix as co
 
 
 #
@@ -158,6 +159,43 @@ def reformat_raw_data(file, n_header=1, outfile=None):
                 
     return final_states,final_data
 
+
+#
+# calc_weights
+#
+# Given a tab separated input file with the following columns, use partial
+# component analysis to determine the relative importance of each factor
+# In:
+#    filename:   tab-separated input file with factor scores for each state
+#                columns: Country, Date, Status, Factor1, Factor2, ....
+#    mn_status:  min value of nuclear weapons status for state to be considered
+#                in analysis (-1 = gave up weapons program, 0 = never pursued,
+#                1 = explored, 2 = pursued, 3 = acquired)
+#    mx_status:  max value of weapons status to be considered
+#    correl_min: weights below this number are rescaled to zero as they are
+#                not significant (including negative correlations)
+#
+# Out:
+#    weights:    relative importance of each factor from the input file. Weights
+#                sum to 1 and cannot be negative.
+#
+def calc_weights(filename, mn_status=0, mx_status=2, correl_min = 1e-6):
+    data_file = open(filename, 'r')
+    full_matrix = np.loadtxt(data_file, skiprows=1,usecols=(2,3,4,5,6,7,8,9,10))
+    relevant_mask = ((full_matrix[:,0] >= mn_status) &
+                     (full_matrix[:,0] <= mx_status))
+    matrix = full_matrix[relevant_mask]
+
+    cor = co.Cor_matrix(matrix)
+    factor_vals = np.array(cor[0,1:])[0]
+    factor_vals[factor_vals < correl_min] = 0
+    f_tot = factor_vals.sum()
+    weights = factor_vals/f_tot  # normalize weights to sum to one
+
+    return weights
+
+
+    
 #
 # calc_pursuit
 #

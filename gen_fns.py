@@ -69,6 +69,16 @@ def ls_fit(xs, ys, ws=None):
 
     return A, B
 
+
+# Taken from interwebs but isn't working!!!
+def fit_exp_linear(t, y, C=0):
+    y = y - C
+    y = np.log(y)
+    K, A_log = np.polyfit(t, y, 1)
+    A = np.exp(A_log)
+    return A, K
+
+
     
 #def rms_fit_quality(data, model):
 
