@@ -361,8 +361,16 @@ def raw_to_factor_scores(infile, n_head=1, outfile=None):
         "En_Repr": [enrich2score, raw_data['Enrichment']],
         "U_Res": [ures2score, raw_data['UReserves']],
         "Sci_Net": [network2score, raw_data['Scientific_Network']],
-        "Conflict": [upsala2conflict_score, [raw_data['Unique_Conflicts'],
-                                         raw_data['Conflict_Intensity']]],
+#        "Conflict": [upsala2conflict_score, [raw_data['Unique_Conflicts'],
+#                                         raw_data['Conflict_Intensity']]],
+        "Conflict": [relations2conflict_score,
+                     [raw_data['Weapon_Status_1'],
+                      raw_data['Conflict_Relation_1'],
+                      raw_data['Weapon_Status_2'],
+                      raw_data['Conflict_Relation_2'],
+                      raw_data['Weapon_Status_3'],
+                      raw_data['Conflict_Relation_3'],
+                      raw_data['Status']]],
         "Auth": [polity2auth_score, raw_data['Polity_Index']],
         "Mil_Sp": [mil_sp2score, raw_data['Military_GDP']]
         }
@@ -510,7 +518,11 @@ def mil_sp2score(mil_gdp):
 # Built reactors take precedence over planned
 #
 # REFERENCE???
-#
+# ** Correlation analysis demonstrated that reactors are protective against
+# proliferation (hypothesis that countries stable enough to run reactors
+# have other mitigating factors that reduce proliferation risk)
+# Therefore reactor score has been inverted so that the more reactors a country
+# has the lower their pursuit score.
 
 def react2score(all_reactors):
     step0 = 0.0
@@ -549,7 +561,7 @@ def react2score(all_reactors):
         else:
             score = 10
 
-        all_scores[i] = score
+        all_scores[i] = 10 - abs(score)
 
     return all_scores
 
@@ -595,7 +607,134 @@ def upsala2conflict_score(all_conflict):
 
     return all_scores
 
+#
+# relations2conflict_score
+#
+# Averages individual conflict scores with up to 3 pairs of countries that
+# have significant relationships (as determined by Hoffman and Buys).
+# Each country has a weapons status (0,2,3) and a defined
+# relationship with partner country (+1 = allies, 0 = neutral, -1 = enemies).
+# Scores are determined based on those 3 values using the score_matrix 
+# dictionary in lookup_conflict_val (these dictionary values are also used
+# in mbmore::StateInst.cc (archetype for use with Cyclus).
+# 
+# In: np.array of arrays - for each target country, weapons status and
+#                          relationship of each pair country,
+#                          and weapon status of target country
+# Out: np.array - for each target country, final conflict score (0-10 scale)
+#
+def relations2conflict_score(all_conflict):
+    weapon_stat1 = all_conflict[0]
+    conflict1= all_conflict[1]
+    weapon_stat2 = all_conflict[2]
+    conflict2= all_conflict[3]
+    weapon_stat3 = all_conflict[4]
+    conflict3= all_conflict[5]
+    host_status = all_conflict[6]
+    
+    all_scores = np.ndarray(weapon_stat1.size)
 
+    for i in range(all_scores.size):
+        n_scores = 0
+        score = 0
+        if (np.isfinite(weapon_stat1[i])):
+             n_scores+=1
+             score+= lookup_conflict_val(host_status[i],
+                                          weapon_stat1[i],
+                                          conflict1[i])
+        if (np.isfinite(weapon_stat2[i])):
+             n_scores+=1
+             score+= lookup_conflict_val(host_status[i],
+                                          weapon_stat2[i],
+                                          conflict2[i])
+        if (np.isfinite(weapon_stat3[i])):
+             n_scores+=1
+             score+= lookup_conflict_val(host_status[i],
+                                          weapon_stat3[i],
+                                         conflict3[i])
+        if (math.isnan(score) or (n_scores == 0)):
+            avg_score = np.nan
+        else:
+            avg_score = score/n_scores
+
+        all_scores[i] = avg_score 
+
+    return all_scores
+             
+
+#
+# lookup_conflict_val
+#
+# Given the relationship between 2 countries (enemy, ally, neutral), and their
+# respective weapon status, look up the 0-10 score for that conflict level
+# 0-10 scores based on discussion with Andy Kydd and documented here:
+# https://docs.google.com/document/d/1c9YeFngXm3RCbuyFCEDWJjUK9Ovn072SpmlZU6j1qhg/edit?usp=sharing
+# Same defns are used in mbmore::StateInst.cc (archetype for use with Cyclus).
+# Historical countries with scores of -1 (gave up a weapons program) or
+# +1 (explored but did not pursue) have been reassigned a value of 0 (never
+# pursued). These gradations could be refined in future work.
+#
+# In: statusA  - weapons status of country A (0, 2, 3)
+#     statusB  - weapons status of country B (0, 2, 3)
+#     relation - relationship between country A and B (-1, 0, +1) 
+#
+# Out: Conflict factor score for that pair (0-10)
+#
+def lookup_conflict_val(statusA, statusB, relation):
+    score_matrix = {
+        "ally_0_0": 2,
+        "neut_0_0": 2,
+        "enemy_0_0": 6,
+        "ally_0_2": 3,
+        "neut_0_2": 4,
+        "enemy_0_2": 8,
+        "ally_0_3": 1,
+        "neut_0_3": 4,
+        "enemy_0_3": 6,
+        "ally_2_2": 3,
+        "neut_2_2": 4,
+        "enemy_2_2": 9,
+        "ally_2_3": 3,
+        "neut_2_3": 5,
+        "enemy_2_3": 10,
+        "ally_3_3": 1,
+        "neut_3_3": 3,
+        "enemy_3_3": 5
+    }
+    
+    # string is enemy if relation is -1
+    reln_str = "enemy_"
+    if (relation == 1):
+        reln_str = "ally_"
+    elif (relation == 0):
+        reln_str = "neut_"
+        
+    first_stat = statusA
+    second_stat = statusB
+
+    #Convention - list smaller number first
+    if (statusA > statusB):
+        first_stat = statusB
+        second_stat = statusA
+
+    # Recode any status that is not 0,2,3
+    # If a country has given up its weapon program (-1) or is only
+    # 'exploring' (1) then treat them as 'never pursued' (0) for now.
+    # Someday these status' could be given unique conflict values in the matrix
+    if (first_stat == 1):
+        first_stat = 0
+    if (first_stat == -1):
+        first_stat = 0
+    if (second_stat == 1):
+        second_stat = 0
+    if (second_stat == -1):
+        second_stat = 0
+
+    reln_str += str(int(first_stat)) + "_" + str(int(second_stat))
+
+    return score_matrix[reln_str]
+
+    
 # convert network (defined by intuition as small=1, medium=2, large=3) into
 # a factor score on 1-10 scale.
 #
