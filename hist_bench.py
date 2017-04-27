@@ -224,7 +224,8 @@ def get_nws():
     nws = {}
     nws["China"] = 1964
     nws["France"] = 1960
-    nws["India"] = 1988
+    nws["India"] = 1974
+#    nws["India"] = 1988  # This was the Way coding but not first detonation
     nws["Israel"] = 1969
     nws["N Korea"] = 2006
     nws["Pakist"] = 1987
@@ -254,7 +255,7 @@ def time_to_acquire():
     t2acq["China"] = 9
     t2acq["Egypt"] = -50
     t2acq["France"] = 6
-    t2acq["India"] = 24
+    t2acq["India"] = 10
     t2acq["Iran"] = -30
     t2acq["Iraq"] = -32
     t2acq["Israel"] = 9
