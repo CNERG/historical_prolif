@@ -5,3 +5,4 @@ score_data.csv
 *.xlsx
 *.old
 old/
+tmp/
