@@ -30,19 +30,27 @@ def first_prolif_qty(path, qty, csv = None):
 
 # Return a list of the column value for every incident of proliferation, for
 # all simulations in the directory
-def all_prolif_qty(path, qty, csv = None):
+def all_prolif_qty(path, qty, eqn_type, csv = None):
     file_list = make_list(path)
     qty_df=pd.DataFrame()
+    agent_df=pd.DataFrame()
     for f in file_list:
          db = cym.dbopen(f)
          weapon_progress = cym.root_metric(name='WeaponProgress')
          evaluator = cym.Evaluator(db)
-         frame = evaluator.eval('WeaponProgress', conds=[('Decision', '==', 1)])
+         frame = evaluator.eval('WeaponProgress', conds=[('Decision', '==', 1),('EqnType', '==', eqn_type)])
+#         frame = evaluator.eval('WeaponProgress', conds=[('Decision', '==', 1)])
          qty_df=pd.concat([qty_df,frame[:][qty]],ignore_index=True)
 
+#         agent_entry = cym.root_metric(name='AgentEntry')
+#         evaluator = cym.Evaluator(db)
+#         agent_frame = evaluator.eval('AgentEntry', conds=[('Kind', '==', 'Inst')])
+#         agent_df=pd.concat([agent_df,agent_frame[:]['AgentId', 'Prototype']],ignore_index=True)
+         
     if (csv != None):
         qty_df.to_csv(path+csv, sep='\t')
-        return
+        agent_df.to_csv(path+'agent_'+csv, sep='\t')
+        return 
     else:
         return qty_df
 
