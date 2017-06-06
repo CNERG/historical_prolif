@@ -51,7 +51,7 @@ def ls_fit(xs, ys, ws=None):
     else:
         weights = ws
     
-    print "weights ", weights 
+    print("weights ", weights)
     x_sq = weights*np.power(xs,2)
     sum_x_sq = x_sq.sum()
     sum_x = (weights*xs).sum()
